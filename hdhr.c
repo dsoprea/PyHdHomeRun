@@ -24,7 +24,7 @@ static char find_devices_docstring[] =
 static char get_tuner_status_docstring[] =
     "Get status information for tuner.";
 static char hdhr_get_supported_docstring[] =
-    "Get get-supported string for device.";
+    "Get supported modulations, channelmaps, etc..";
 
 static PyMethodDef module_methods[] = {
     {"find_devices", (PyCFunction)hdhr_find_devices, METH_VARARGS | METH_KEYWORDS, find_devices_docstring},
@@ -246,7 +246,7 @@ static PyObject *hdhr_get_supported(PyObject *self, PyObject *args, PyObject *ke
 
     if((get_supported_result = hdhomerun_device_get_supported(hd, param_prefix, &pstr)) == -1)
     {
-        PyErr_SetString(PyExc_IOError, "get-supported request failed.");
+        PyErr_SetString(PyExc_IOError, "Get-supported request failed.");
         return NULL;
     }
 
