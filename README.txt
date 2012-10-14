@@ -34,7 +34,7 @@ Requirements
   If you have the build-tools installed, all you have to do is "make" from the 
   directory that you extracted the files to. Then, just make sure the library 
   "libhdhomerun.so" is either in the directory of this project, or in the 
-  library-search path.
+  library search-path.
 
 Executing the Current Development Example Script
 ================================================
@@ -64,7 +64,7 @@ To run:
    'SymbolErrorQuality': 100}
 
 The code essentially just runs the following commands to get the available 
-devices and poll the first tuner of the first device found:
+devices, and then to poll the first tuner of the first device found:
 
   devices = hdhr.find_devices()
 
