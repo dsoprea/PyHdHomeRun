@@ -15,6 +15,7 @@
 
 static PyObject *hdhr_find_devices(PyObject *self, PyObject *args, PyObject *keywds);
 static PyObject *hdhr_get_tuner_status(PyObject *self, PyObject *args, PyObject *keywds);
+static PyObject *hdhr_get_supported(PyObject *self, PyObject *args, PyObject *keywds);
 
 static char module_docstring[] =
     "This module provides an interface to HDHomeRun network TV tuners.";
@@ -22,10 +23,14 @@ static char find_devices_docstring[] =
     "Poll devices.";
 static char get_tuner_status_docstring[] =
     "Get status information for tuner.";
+static char hdhr_get_supported_docstring[] =
+    "Get get-supported string for device.";
 
 static PyMethodDef module_methods[] = {
     {"find_devices", (PyCFunction)hdhr_find_devices, METH_VARARGS | METH_KEYWORDS, find_devices_docstring},
     {"get_tuner_status", (PyCFunction)hdhr_get_tuner_status, METH_VARARGS | METH_KEYWORDS, get_tuner_status_docstring},
+    {"get_supported", (PyCFunction)hdhr_get_supported, METH_VARARGS | METH_KEYWORDS, hdhr_get_supported_docstring},
+
     {NULL, NULL, 0, NULL}
 };
 
@@ -193,7 +198,7 @@ static PyObject *hdhr_get_tuner_status(PyObject *self, PyObject *args, PyObject 
 
     else if(status_result == 0)
     {
-        PyErr_SetString(PyExc_RuntimeError, "Device rejected request.");
+        PyErr_SetString(PyExc_RuntimeError, "Device rejected get-tuner-status request.");
         return NULL;
     }
 
@@ -216,5 +221,43 @@ static PyObject *hdhr_get_tuner_status(PyObject *self, PyObject *args, PyObject 
     hdhomerun_device_destroy(hd);
 
     return temp;
+}
+
+static PyObject *hdhr_get_supported(PyObject *self, PyObject *args, PyObject *keywds)
+{
+    char *param_ip = 0;
+    char *param_prefix = 0;
+
+    static char *kwlist[] = {"ip", "prefix", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "s|s", kwlist, &param_ip, &param_prefix))
+        return NULL;
+
+    struct hdhomerun_device_t *hd;
+
+	if ((hd = hdhomerun_device_create_from_str(param_ip, NULL)) == NULL) 
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Could not create device structure.");
+        return NULL;
+	}
+
+    char *pstr;
+    int get_supported_result;
+
+    if((get_supported_result = hdhomerun_device_get_supported(hd, param_prefix, &pstr)) == -1)
+    {
+        PyErr_SetString(PyExc_IOError, "get-supported request failed.");
+        return NULL;
+    }
+
+    else if(get_supported_result == 0)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Device rejected get-supported request.");
+        return NULL;
+    }
+
+    hdhomerun_device_destroy(hd);
+
+    return Py_BuildValue("s", pstr);
 }
 
