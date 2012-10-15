@@ -13,7 +13,7 @@ those with Python to make them far more intuitive to interact with. Obviously,
 any rendering should still be done in C, but there's no rule that we can't 
 hook it all together with Python and speed-up development a bit.
 
-I saw a couple other projects that either directly exposed the dynamic 
+I saw a couple of other projects that either directly exposed the dynamic 
 libraries through Python or invoked the command. I wanted an intuitive 
 interface that interacted with the dynamic libraries without being too coupled 
 with them, and encapsulated the entire breadth of typical usage. The 
