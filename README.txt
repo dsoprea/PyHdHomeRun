@@ -26,10 +26,10 @@ x Be able to discover the device(s) on the local network.
 x Be able to poll for status.
 x Be able to list channels.
 > Be able to scan channels.
-> For a tuner to be able to set the channel and acquire a lock.
-> To be able to instruct a tuner to start sending video back.
+x For a tuner to be able to set the channel and acquire a lock.
+x To be able to instruct a tuner to start sending video back.
 
-I will mark them as progress is made.
+I will check them off as progress is made.
 
 Requirements
 ============

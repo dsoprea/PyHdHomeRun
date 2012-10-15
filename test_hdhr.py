@@ -1,5 +1,6 @@
 import hdhr
 from pprint import pprint
+from sys import exit
 
 get_supported_channelmaps = lambda ip: \
         hdhr.get_supported(ip, 'channelmap: ').split(' ')
@@ -18,11 +19,13 @@ print("Status for tuner [%s]-0:\n" % (first_ip))
 
 pprint(hdhr.get_tuner_status(first_ip))
 
-print
+print("\nSupported features:\n")
+
+print(hdhr.get_supported(first_ip))
 
 supported = get_supported_channelmaps(first_ip)
 
-print("Supported: %s" % (supported))
+print("Supported channelmaps: %s" % (supported))
 
 #print("\nChannel list:\n")
 #
@@ -33,6 +36,29 @@ print("Supported: %s" % (supported))
 print("\nVStatus:\n")
 
 pprint(hdhr.get_tuner_vstatus(first_ip))
+
+print
+
+#print("LockKey:\n")
+
+#lock_key = hdhr.acquire_lockkey(first_ip)
+#pprint(lock_key)
+
+print
+
+vchannel = '66'
+print("Acquire (%s).\n" % (vchannel))
+
+hdhr.set_vchannel(first_ip, vchannel)
+is_locked = hdhr.wait_for_lock(first_ip);
+
+if not is_locked:
+    print("Could not lock on channel [%s]." % (vchannel))
+    exit()
+
+print("Channel changed. Receiving video.")
+
+hdhr.set_target(first_ip, '192.168.5.102:9999')
 
 print
 

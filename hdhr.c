@@ -14,6 +14,10 @@ static PyObject *hdhr_get_tuner_status(PyObject *self, PyObject *args, PyObject 
 static PyObject *hdhr_get_tuner_vstatus(PyObject *self, PyObject *args, PyObject *keywds);
 static PyObject *hdhr_get_supported(PyObject *self, PyObject *args, PyObject *keywds);
 static PyObject *hdhr_get_channel_list(PyObject *self, PyObject *args, PyObject *keywds);
+//static PyObject *hdhr_acquire_lockkey(PyObject *self, PyObject *args, PyObject *keywds);
+static PyObject *hdhr_set_vchannel(PyObject *self, PyObject *args, PyObject *keywds);
+static PyObject *hdhr_set_target(PyObject *self, PyObject *args, PyObject *keywds);
+static PyObject *hdhr_wait_for_lock(PyObject *self, PyObject *args, PyObject *keywds);
 
 #ifndef hdhomerun_channel_entry_t
 
@@ -25,6 +29,24 @@ struct hdhomerun_channel_entry_t {
 	uint32_t frequency;
 	uint16_t channel_number;
 	char name[16];
+};
+
+#endif
+
+#ifndef hdhomerun_device_t
+
+struct hdhomerun_device_t {
+	struct hdhomerun_control_sock_t *cs;
+	struct hdhomerun_video_sock_t *vs;
+	struct hdhomerun_debug_t *dbg;
+	struct hdhomerun_channelscan_t *scan;
+	uint32_t multicast_ip;
+	uint16_t multicast_port;
+	uint32_t device_id;
+	unsigned int tuner;
+	uint32_t lockkey;
+	char name[32];
+	char model[32];
 };
 
 #endif
@@ -41,13 +63,25 @@ static char hdhr_get_supported_docstring[] =
     "Get supported modulations, channelmaps, etc..";
 static char hdhr_get_channel_list_docstring[] =
     "Get dictionary of channels and frequencies.";
+//static char hdhr_acquire_lockkey_docstring[] =
+//    "Acquire lock-key for channel changing.";
+static char hdhr_set_vchannel_docstring[] =
+    "Set current vchannel.";
+static char hdhr_set_target_docstring[] =
+    "Set current target.";
+static char hdhr_wait_for_lock_docstring[] =
+    "Wait for the new channel to lock-in.";
 
 static PyMethodDef module_methods[] = {
-    {"find_devices", (PyCFunction)hdhr_find_devices, METH_VARARGS | METH_KEYWORDS, find_devices_docstring},
-    {"get_tuner_status", (PyCFunction)hdhr_get_tuner_status, METH_VARARGS | METH_KEYWORDS, get_tuner_status_docstring},
+    {"find_devices",      (PyCFunction)hdhr_find_devices,      METH_VARARGS | METH_KEYWORDS, find_devices_docstring},
+    {"get_tuner_status",  (PyCFunction)hdhr_get_tuner_status,  METH_VARARGS | METH_KEYWORDS, get_tuner_status_docstring},
     {"get_tuner_vstatus", (PyCFunction)hdhr_get_tuner_vstatus, METH_VARARGS | METH_KEYWORDS, get_tuner_vstatus_docstring},
-    {"get_supported", (PyCFunction)hdhr_get_supported, METH_VARARGS | METH_KEYWORDS, hdhr_get_supported_docstring},
-    {"get_channel_list", (PyCFunction)hdhr_get_channel_list, METH_VARARGS | METH_KEYWORDS, hdhr_get_channel_list_docstring},
+    {"get_supported",     (PyCFunction)hdhr_get_supported,     METH_VARARGS | METH_KEYWORDS, hdhr_get_supported_docstring},
+    {"get_channel_list",  (PyCFunction)hdhr_get_channel_list,  METH_VARARGS | METH_KEYWORDS, hdhr_get_channel_list_docstring},
+//    {"acquire_lockkey",   (PyCFunction)hdhr_acquire_lockkey,   METH_VARARGS | METH_KEYWORDS, hdhr_acquire_lockkey_docstring},
+    {"set_vchannel",      (PyCFunction)hdhr_set_vchannel,      METH_VARARGS | METH_KEYWORDS, hdhr_set_vchannel_docstring},
+    {"set_target",        (PyCFunction)hdhr_set_target,        METH_VARARGS | METH_KEYWORDS, hdhr_set_target_docstring},
+    {"wait_for_lock",     (PyCFunction)hdhr_wait_for_lock,     METH_VARARGS | METH_KEYWORDS, hdhr_wait_for_lock_docstring},
 
     {NULL, NULL, 0, NULL}
 };
@@ -343,8 +377,8 @@ static PyObject *hdhr_get_channel_list(PyObject *self, PyObject *args, PyObject 
 
     // Parse arguments.
     //
-    // We expect an IP, ID, or "<ID>-<tuner>" as the first parameter, and an 
-    // optional prefix to identify a particular row.
+    // We expect an IP, ID, or "<ID>-<tuner>" as the first parameter, and the
+    // name of a channelmap.
 
     static char *kwlist[] = {"id_or_ip", "channelmap", NULL};
 
@@ -364,11 +398,19 @@ static PyObject *hdhr_get_channel_list(PyObject *self, PyObject *args, PyObject 
     PyObject *nice_dict;
 
     if((nice_dict = Py_BuildValue("{}")) == NULL)
+    {
+        hdhomerun_device_destroy(hd);
+
         return NULL;
+    }
 
     // There was an error or there were no channels.
     if((channel_list = hdhomerun_channel_list_create(param_channelmap)) == NULL)
+    {
+        hdhomerun_device_destroy(hd);
+
         return nice_dict;
+    }
 
     // Move through each channel and set them on the dictionary.
 
@@ -382,18 +424,24 @@ static PyObject *hdhr_get_channel_list(PyObject *self, PyObject *args, PyObject 
         if((entry_key = Py_BuildValue("I", entry->channel_number)) == NULL)
         {
             hdhomerun_channel_list_destroy(channel_list);
+            hdhomerun_device_destroy(hd);
+
             return NULL;
         }
 
         if((entry_value = Py_BuildValue("I", entry->frequency)) == NULL)
         {
             hdhomerun_channel_list_destroy(channel_list);
+            hdhomerun_device_destroy(hd);
+
             return NULL;
         }
 
         if(PyDict_SetItem(nice_dict, entry_key, entry_value) == -1)
         {
             hdhomerun_channel_list_destroy(channel_list);
+            hdhomerun_device_destroy(hd);
+
             return NULL;
         }
 
@@ -403,5 +451,203 @@ static PyObject *hdhr_get_channel_list(PyObject *self, PyObject *args, PyObject 
     hdhomerun_channel_list_destroy(channel_list);
 
     return nice_dict;
+}
+
+/* Hasn't been necessary to change channels.
+// Acquire a lock-key to use to change channels.
+static PyObject *hdhr_acquire_lockkey(PyObject *self, PyObject *args, PyObject *keywds)
+{
+    char *param_id_or_ip = 0;
+
+    // Parse arguments.
+    //
+    // We expect an IP, ID, or "<ID>-<tuner>" as the first parameter, and an 
+    // optional prefix to identify a particular row.
+
+    static char *kwlist[] = {"id_or_ip", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "s", kwlist, &param_id_or_ip))
+        return NULL;
+
+    struct hdhomerun_device_t *hd;
+
+	if((hd = hdhomerun_device_create_from_str(param_id_or_ip, NULL)) == NULL) 
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Could not create device structure for lockkey.");
+        return NULL;
+	}
+
+    int lockkey_result;
+    char *error;
+
+    if((lockkey_result = hdhomerun_device_tuner_lockkey_request(hd, &error)) == -1)
+    {
+        hdhomerun_device_destroy(hd);
+
+        PyErr_SetString(PyExc_IOError, "Request to acquire lock-key failed.");
+        return NULL;
+    }
+
+    else if(lockkey_result == 0)
+    {
+        hdhomerun_device_destroy(hd);
+
+        PyErr_SetString(PyExc_RuntimeError, "Device rejected lock-key-acquire request.");
+        return NULL;
+    }
+
+    unsigned int lockkey = hd->lockkey;
+
+    hdhomerun_device_tuner_lockkey_release(hd);
+    hdhomerun_device_destroy(hd);
+
+    PyObject *nice_lockkey;
+   
+    if((nice_lockkey = Py_BuildValue("I", &lockkey)) == NULL)
+        return NULL;
+
+    return nice_lockkey;
+}
+*/
+
+// Request to set the vchannel.
+static PyObject *hdhr_set_vchannel(PyObject *self, PyObject *args, PyObject *keywds)
+{
+    char *param_id_or_ip = 0;
+    char *param_vchannel = 0;
+
+    // Parse arguments.
+    //
+    // We expect an IP, ID, or "<ID>-<tuner>" as the first parameter, and a
+    // vchannel.
+
+    static char *kwlist[] = {"id_or_ip", "vchannel", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "ss", kwlist, &param_id_or_ip, &param_vchannel))
+        return NULL;
+
+    struct hdhomerun_device_t *hd;
+
+	if((hd = hdhomerun_device_create_from_str(param_id_or_ip, NULL)) == NULL) 
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Could not create device structure for vchannel change.");
+        return NULL;
+	}
+
+    int vchannel_result;
+    if((vchannel_result = hdhomerun_device_set_tuner_vchannel(hd, param_vchannel)) == -1)
+    {
+        hdhomerun_device_destroy(hd);
+
+        PyErr_SetString(PyExc_IOError, "Request to set vchannel failed.");
+        return NULL;
+    }
+
+    else if(vchannel_result == 0)
+    {
+        hdhomerun_device_destroy(hd);
+
+        PyErr_SetString(PyExc_RuntimeError, "Request to set vchannel was rejected.");
+        return NULL;
+    }
+
+    hdhomerun_device_destroy(hd);
+
+    return Py_BuildValue("");
+}
+
+// Request to set the stream target.
+static PyObject *hdhr_set_target(PyObject *self, PyObject *args, PyObject *keywds)
+{
+    char *param_id_or_ip = 0;
+    char *param_target = 0;
+
+    // Parse arguments.
+    //
+    // We expect an IP, ID, or "<ID>-<tuner>" as the first parameter, and a
+    // "<IP>:<port>" for the outgoing UDP feed.
+
+    static char *kwlist[] = {"id_or_ip", "target", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "ss", kwlist, &param_id_or_ip, &param_target))
+        return NULL;
+
+    struct hdhomerun_device_t *hd;
+
+	if((hd = hdhomerun_device_create_from_str(param_id_or_ip, NULL)) == NULL) 
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Could not create device structure for target change.");
+        return NULL;
+	}
+
+    int target_result;
+    if((target_result = hdhomerun_device_set_tuner_target(hd, param_target)) == -1)
+    {
+        hdhomerun_device_destroy(hd);
+
+        PyErr_SetString(PyExc_IOError, "Request to set target failed.");
+        return NULL;
+    }
+
+    else if(target_result == 0)
+    {
+        hdhomerun_device_destroy(hd);
+
+        PyErr_SetString(PyExc_RuntimeError, "Request to set target was rejected.");
+        return NULL;
+    }
+
+    hdhomerun_device_destroy(hd);
+
+    return Py_BuildValue("");
+}
+
+// Request to check the status of a channel-change.
+static PyObject *hdhr_wait_for_lock(PyObject *self, PyObject *args, PyObject *keywds)
+{
+    char *param_id_or_ip = 0;
+
+    // Parse arguments.
+    //
+    // We expect an IP, ID, or "<ID>-<tuner>" as the first parameter, and a
+    // "<IP>:<port>" for the outgoing UDP feed.
+
+    static char *kwlist[] = {"id_or_ip", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "s", kwlist, &param_id_or_ip))
+        return NULL;
+
+    struct hdhomerun_device_t *hd;
+
+	if((hd = hdhomerun_device_create_from_str(param_id_or_ip, NULL)) == NULL) 
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Could not create device structure for the wait-for-lock request.");
+        return NULL;
+	}
+
+    struct hdhomerun_tuner_status_t status;
+
+    int hold_result;
+    if((hold_result = hdhomerun_device_wait_for_lock(hd, &status)) == -1)
+    {
+        hdhomerun_device_destroy(hd);
+
+        PyErr_SetString(PyExc_IOError, "Request to wait for the lock failed.");
+        return NULL;
+    }
+
+    else if(hold_result == 0)
+    {
+        hdhomerun_device_destroy(hd);
+
+        PyErr_SetString(PyExc_RuntimeError, "Request to wait for the lock was rejected.");
+        return NULL;
+    }
+
+    PyObject *have_signal = Py_BuildValue("O", (status.signal_present ? Py_True : Py_False));
+
+    hdhomerun_device_destroy(hd);
+
+    return have_signal;
 }
 
