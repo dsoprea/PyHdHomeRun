@@ -17,8 +17,9 @@ The objectives are as follows:
 
 x Be able to discover the device(s) on the local network.
 x Be able to poll for status.
-> Be able to scan and list channels.
-> For a tuner to be able to acquire a lock on a channel.
+x Be able to list channels.
+> Be able to scan channels.
+> For a tuner to be able to set the channel and acquire a lock.
 > To be able to instruct a tuner to start sending video back.
 
 I will mark them as progress is made.
