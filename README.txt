@@ -78,3 +78,17 @@ devices, and then to poll the first tuner of the first device found:
 
   hdhr.get_tuner_status(devices[0]['IP'], 0)
 
+To change to channel 66 and send the video back:
+
+    vchannel = '66'
+    hdhr.set_vchannel(ip_address, vchannel)
+    is_locked = hdhr.wait_for_lock(first_ip);
+
+    if not is_locked:
+        print("Could not lock on channel [%s]." % (vchannel))
+        sys.exit()
+
+    hdhr.set_target(first_ip, '192.168.5.102:9999')
+
+Then, just open the video stream "udp://:9999" using VLC or another streaming client.
+
