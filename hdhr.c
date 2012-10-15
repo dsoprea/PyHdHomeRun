@@ -7,11 +7,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-//#include <stdlib.h>
 #include <stdio.h>
-
-// This is the constant defined in hdhomerun_discover.c .
-#define HDHOMERUN_DISOCVER_MAX_SOCK_COUNT 16
 
 static PyObject *hdhr_find_devices(PyObject *self, PyObject *args, PyObject *keywds);
 static PyObject *hdhr_get_tuner_status(PyObject *self, PyObject *args, PyObject *keywds);
@@ -20,6 +16,8 @@ static PyObject *hdhr_get_supported(PyObject *self, PyObject *args, PyObject *ke
 static PyObject *hdhr_get_channel_list(PyObject *self, PyObject *args, PyObject *keywds);
 
 #ifndef hdhomerun_channel_entry_t
+
+// We've had issues with this.
 
 struct hdhomerun_channel_entry_t {
 	struct hdhomerun_channel_entry_t *next;
@@ -61,6 +59,7 @@ PyMODINIT_FUNC inithdhr(void)
         return;
 }
 
+// Discover devices on the local network.
 static PyObject *hdhr_find_devices(PyObject *self, PyObject *args, PyObject *keywds)
 {
     char *param_ip = 0;
@@ -157,6 +156,7 @@ static PyObject *hdhr_find_devices(PyObject *self, PyObject *args, PyObject *key
     return nice_devices;
 }
 
+// Get current status of tuner (low-level).
 static PyObject *hdhr_get_tuner_status(PyObject *self, PyObject *args, PyObject *keywds)
 {
     char *param_id_or_ip = 0;
@@ -223,6 +223,7 @@ static PyObject *hdhr_get_tuner_status(PyObject *self, PyObject *args, PyObject 
     return tuner_status;
 }
 
+// Get current status of tuner (high-level).
 static PyObject *hdhr_get_tuner_vstatus(PyObject *self, PyObject *args, PyObject *keywds)
 {
     char *param_id_or_ip = 0;
@@ -286,6 +287,7 @@ static PyObject *hdhr_get_tuner_vstatus(PyObject *self, PyObject *args, PyObject
     return tuner_vstatus;
 }
 
+// Get supported modulations, channelmaps, etc..
 static PyObject *hdhr_get_supported(PyObject *self, PyObject *args, PyObject *keywds)
 {
     char *param_id_or_ip = 0;
@@ -333,6 +335,7 @@ static PyObject *hdhr_get_supported(PyObject *self, PyObject *args, PyObject *ke
     return Py_BuildValue("s", pstr);
 }
 
+// Get dictionary of channel-numbers and frequencies.
 static PyObject *hdhr_get_channel_list(PyObject *self, PyObject *args, PyObject *keywds)
 {
     char *param_id_or_ip = 0;
