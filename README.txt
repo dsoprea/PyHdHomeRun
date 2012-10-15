@@ -9,9 +9,16 @@ your service-provider's channels directly (thus bypassing the need for a cable
 -box).
 
 HDHomeRun makes the code available for the libraries, but this project wraps 
-those wraps with Python to make them far more intuitive to interact with. 
-Obviously, any rendering should still be done in C, but there's no rule that we 
-can't hook it all together with Python and speed-up development a bit.
+those with Python to make them far more intuitive to interact with. Obviously, 
+any rendering should still be done in C, but there's no rule that we can't 
+hook it all together with Python and speed-up development a bit.
+
+I saw a couple other projects that either directly exposed the dynamic 
+libraries through Python or invoked the command. I wanted an intuitive 
+interface that interacted with the dynamic libraries without being too coupled 
+with them, and encapsulated the entire breadth of typical usage. The 
+individual calls should be basic primitives that can plug-in nicely to the 
+predefined tuner interface of another DVR or TV application.
 
 The objectives are as follows:
 
