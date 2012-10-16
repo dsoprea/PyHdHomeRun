@@ -20,16 +20,16 @@ with them, and encapsulated the entire breadth of typical usage. The
 individual calls should be basic primitives that can plug-in nicely to the 
 predefined tuner interface of another DVR or TV application.
 
-The objectives are as follows:
+The goals of this project were as follows:
 
-x Be able to discover the device(s) on the local network.
-x Be able to poll for status.
-x Be able to list channels.
+> Be able to discover the device(s) on the local network.
+> Be able to poll for status.
+> Be able to list channels.
 > Be able to scan channels.
-x For a tuner to be able to set the channel and acquire a lock.
-x To be able to instruct a tuner to start sending video back.
+> For a tuner to be able to set the channel and acquire a lock.
+> To be able to instruct a tuner to start sending video back.
 
-I will check them off as progress is made.
+All goals have all been completed.
 
 Requirements
 ============
