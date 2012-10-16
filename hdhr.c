@@ -18,6 +18,9 @@ static PyObject *hdhr_get_channel_list(PyObject *self, PyObject *args, PyObject 
 static PyObject *hdhr_set_vchannel(PyObject *self, PyObject *args, PyObject *keywds);
 static PyObject *hdhr_set_target(PyObject *self, PyObject *args, PyObject *keywds);
 static PyObject *hdhr_wait_for_lock(PyObject *self, PyObject *args, PyObject *keywds);
+static PyObject *hdhr_clear_target(PyObject *self, PyObject *args, PyObject *keywds);
+static PyObject *hdhr_scan_channels(PyObject *self, PyObject *args, PyObject *keywds);
+static PyObject *hdhr_scan_channels(PyObject *self, PyObject *args, PyObject *keywds);
 
 #ifndef hdhomerun_channel_entry_t
 
@@ -62,15 +65,19 @@ static char get_tuner_vstatus_docstring[] =
 static char hdhr_get_supported_docstring[] =
     "Get supported modulations, channelmaps, etc..";
 static char hdhr_get_channel_list_docstring[] =
-    "Get dictionary of channels and frequencies.";
+    "Get dictionary of calculated channels and frequencies.";
 //static char hdhr_acquire_lockkey_docstring[] =
 //    "Acquire lock-key for channel changing.";
 static char hdhr_set_vchannel_docstring[] =
     "Set current vchannel.";
 static char hdhr_set_target_docstring[] =
-    "Set current target.";
+    "Set current target (start streaming).";
 static char hdhr_wait_for_lock_docstring[] =
     "Wait for the new channel to lock-in.";
+static char hdhr_clear_target_docstring[] =
+    "Clear the current target (stop streaming).";
+static char hdhr_scan_channels_docstring[] =
+    "Scan for channels.";
 
 static PyMethodDef module_methods[] = {
     {"find_devices",      (PyCFunction)hdhr_find_devices,      METH_VARARGS | METH_KEYWORDS, find_devices_docstring},
@@ -82,6 +89,8 @@ static PyMethodDef module_methods[] = {
     {"set_vchannel",      (PyCFunction)hdhr_set_vchannel,      METH_VARARGS | METH_KEYWORDS, hdhr_set_vchannel_docstring},
     {"set_target",        (PyCFunction)hdhr_set_target,        METH_VARARGS | METH_KEYWORDS, hdhr_set_target_docstring},
     {"wait_for_lock",     (PyCFunction)hdhr_wait_for_lock,     METH_VARARGS | METH_KEYWORDS, hdhr_wait_for_lock_docstring},
+    {"clear_target",      (PyCFunction)hdhr_clear_target,      METH_VARARGS | METH_KEYWORDS, hdhr_clear_target_docstring},
+    {"scan_channels",     (PyCFunction)hdhr_scan_channels,     METH_VARARGS | METH_KEYWORDS, hdhr_scan_channels_docstring},
 
     {NULL, NULL, 0, NULL}
 };
@@ -369,7 +378,8 @@ static PyObject *hdhr_get_supported(PyObject *self, PyObject *args, PyObject *ke
     return Py_BuildValue("s", pstr);
 }
 
-// Get dictionary of channel-numbers and frequencies.
+// Get dictionary of channel-numbers and frequencies. This is calculated, not 
+// discovered.
 static PyObject *hdhr_get_channel_list(PyObject *self, PyObject *args, PyObject *keywds)
 {
     char *param_id_or_ip = 0;
@@ -649,5 +659,263 @@ static PyObject *hdhr_wait_for_lock(PyObject *self, PyObject *args, PyObject *ke
     hdhomerun_device_destroy(hd);
 
     return have_signal;
+}
+
+// Request to stop streaming.
+static PyObject *hdhr_clear_target(PyObject *self, PyObject *args, PyObject *keywds)
+{
+    char *param_id_or_ip = 0;
+
+    // Parse arguments.
+    //
+    // We expect an IP, ID, or "<ID>-<tuner>" as the first parameter, and a
+    // "<IP>:<port>" for the outgoing UDP feed.
+
+    static char *kwlist[] = {"id_or_ip", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "s", kwlist, &param_id_or_ip))
+        return NULL;
+
+    struct hdhomerun_device_t *hd;
+
+	if((hd = hdhomerun_device_create_from_str(param_id_or_ip, NULL)) == NULL) 
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Could not create device structure for the wait-for-lock request.");
+        return NULL;
+	}
+
+    hdhomerun_device_stream_stop(hd);
+
+    hdhomerun_device_destroy(hd);
+
+    return Py_BuildValue("");
+}
+
+// Scan channels.
+static PyObject *hdhr_scan_channels(PyObject *self, PyObject *args, PyObject *keywds)
+{
+    char *param_id_or_ip = 0;
+    char *param_channelmap = 0;
+    PyObject *param_callback = 0;
+
+    char message[200];
+
+    // Parse arguments.
+    //
+    // We expect an IP, ID, or "<ID>-<tuner>" as the first parameter, and the
+    // name of a channelmap.
+
+    static char *kwlist[] = {"id_or_ip", "channelmap", "status_callback", NULL};
+
+    char have_callback = 0;
+
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "ss|O", kwlist, &param_id_or_ip, &param_channelmap, &param_callback))
+        return NULL;
+
+    else if(param_callback != Py_BuildValue(""))
+    {
+        if(!PyCallable_Check(param_callback))
+        {
+            PyErr_SetString(PyExc_RuntimeError, "The callback must be callable, if provided.");
+            return NULL;
+        }
+
+        have_callback = 1;
+    }
+
+    struct hdhomerun_device_t *hd;
+
+	if ((hd = hdhomerun_device_create_from_str(param_id_or_ip, NULL)) == NULL) 
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Could not create device structure for channel-scan.");
+        return NULL;
+	}
+	
+    struct hdhomerun_channelscan_t *scan;
+    
+    if((scan = channelscan_create(hd, param_channelmap)) == NULL)
+    {
+        hdhomerun_device_destroy(hd);
+
+        PyErr_SetString(PyExc_RuntimeError, "Could not create channel-scan object.");
+        return NULL;
+    }
+
+    struct hdhomerun_channelscan_result_t result;
+    int channel_result;
+    int i = 0;
+    PyObject *nice_list;
+    
+    if((nice_list = Py_BuildValue("[]")) == NULL)
+    {
+        channelscan_destroy(scan);
+        hdhomerun_device_destroy(hd);
+
+        return NULL;
+    }
+    
+    PyObject *nice_channel_info;
+    PyObject *callback_payload_dict;
+    PyObject *callback_payload_tuple;
+    PyObject *callback_result;
+    PyObject *nice_program_list;
+    PyObject *nice_program;
+    int progress;
+    char scan_terminated = 0;
+    int j;
+
+    while((channel_result = channelscan_advance(scan, &result)) != 0)
+    {
+        if((channel_result = channelscan_detect(scan, &result)) == -1)
+        {
+            channelscan_destroy(scan);
+            hdhomerun_device_destroy(hd);
+
+            sprintf(message, "There was an error while detecting on channel with index (%d).", i);
+        
+            PyErr_SetString(PyExc_RuntimeError, message);
+            return NULL;
+        }
+        
+        else if(channel_result == 0)
+        {
+            i++;
+            continue;
+        }
+
+        if((nice_program_list = Py_BuildValue("[]")) == NULL)
+        {
+            channelscan_destroy(scan);
+            hdhomerun_device_destroy(hd);
+
+            return NULL;
+        }
+
+        j = 0;
+        while(j < result.program_count)
+        {
+/*
+struct hdhomerun_channelscan_program_t {
+	char program_str[64];
+	uint16_t program_number;
+	uint16_t virtual_major;
+	uint16_t virtual_minor;
+	uint16_t type;
+	char name[32];
+};
+*/
+            if((nice_program = Py_BuildValue("s:s:s:b:s:b:s:b:s:b:s:s",
+                    "Descriptor",   result.programs[j].program_str,
+                    "Number",       result.programs[j].program_number,
+                    "VirtualMajor", result.programs[j].virtual_major,
+                    "VirtualMinor", result.programs[j].virtual_minor,
+                    "Type",         result.programs[j].type,
+                    "Name",         result.programs[j].name
+                )) == NULL)
+            {
+                channelscan_destroy(scan);
+                hdhomerun_device_destroy(hd);
+
+                return NULL;
+            }
+
+            if(PyList_Append(nice_program_list, nice_program) == -1)
+            {
+                channelscan_destroy(scan);
+                hdhomerun_device_destroy(hd);
+
+                return NULL;
+            }
+        
+            j++;
+        }
+        
+        if((nice_channel_info = Py_BuildValue("s:s:s:I:s:I:s:i:s:O:s:b:s:O",
+                "Descriptor",                   result.channel_str,
+                "ChannelMap",                   result.channelmap,
+                "Frequency",                    result.frequency,
+                "ProgramCount",                 result.program_count,
+                "TransportStreamIdDetected",    (result.transport_stream_id_detected ? Py_True : Py_False),
+                "TransportStreamId",            result.transport_stream_id,
+                "Programs",                     nice_program_list
+                )) == NULL)
+        {
+            channelscan_destroy(scan);
+            hdhomerun_device_destroy(hd);
+
+            return NULL;
+        }
+        
+        if(PyList_Append(nice_list, nice_channel_info) == -1)
+        {
+            channelscan_destroy(scan);
+            hdhomerun_device_destroy(hd);
+
+            return NULL;
+        }
+        
+        if(have_callback)
+        {
+            progress = channelscan_get_progress(scan);
+
+            if((callback_payload_tuple = Py_BuildValue("(O:b)",
+                        nice_channel_info,
+                        progress
+                    )) == NULL)
+            {
+                channelscan_destroy(scan);
+                hdhomerun_device_destroy(hd);
+
+                return NULL;
+            }
+            
+            if((callback_payload_dict = Py_BuildValue("{s:O:s:b}",
+                        "channel_info",  nice_channel_info,
+                        "scan_progress", progress
+                    )) == NULL)
+            {
+                channelscan_destroy(scan);
+                hdhomerun_device_destroy(hd);
+
+                return NULL;
+            }
+            
+            if((callback_result = PyObject_Call(param_callback, callback_payload_tuple, NULL)) == NULL)
+            {
+                channelscan_destroy(scan);
+                hdhomerun_device_destroy(hd);
+
+                return NULL;
+            }
+
+            if(!PyObject_IsTrue(callback_result))
+            {
+                scan_terminated = 1;
+                break;
+            }
+        }
+        
+        i++;
+    }
+
+    channelscan_destroy(scan);
+    hdhomerun_device_destroy(hd);
+
+    if(scan_terminated)
+        return Py_BuildValue("");
+/*
+struct hdhomerun_channelscan_result_t {
+	char channel_str[64];
+	uint32_t channelmap;
+	uint32_t frequency;
+	struct hdhomerun_tuner_status_t status;
+	int program_count;
+	struct hdhomerun_channelscan_program_t programs[HDHOMERUN_CHANNELSCAN_MAX_PROGRAM_COUNT];
+	bool_t transport_stream_id_detected;
+	uint16_t transport_stream_id;
+};
+*/
+
+    return nice_list;
 }
 

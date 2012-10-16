@@ -46,6 +46,25 @@ print
 
 print
 
+print("Scanning channels.")
+
+def progress_callback(channel_info, scan_progress):
+    print("Processed channel (%d)." % (scan_progress))
+
+    pprint(channel_info)
+
+    print
+
+    return True
+
+hdhr.scan_channels(first_ip + "-2", 'us-cable', progress_callback)
+
+exit()
+
+print
+
+#hdhr.clear_target(first_ip)
+
 vchannel = '66'
 print("Acquire (%s).\n" % (vchannel))
 
@@ -58,7 +77,7 @@ if not is_locked:
 
 print("Channel changed. Receiving video.")
 
-hdhr.set_target(first_ip, '192.168.5.102:9999')
+hdhr.set_target(first_ip, '192.168.5.112:9999')
 
 print
 
