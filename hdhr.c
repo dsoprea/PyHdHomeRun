@@ -707,20 +707,13 @@ static PyObject *hdhr_scan_channels(PyObject *self, PyObject *args, PyObject *ke
 
     static char *kwlist[] = {"id_or_ip", "channelmap", "status_callback", NULL};
 
-    char have_callback = 0;
-
-    if (!PyArg_ParseTupleAndKeywords(args, keywds, "ss|O", kwlist, &param_id_or_ip, &param_channelmap, &param_callback))
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "ssO", kwlist, &param_id_or_ip, &param_channelmap, &param_callback))
         return NULL;
 
-    else if(param_callback != Py_BuildValue(""))
+    else if(!PyCallable_Check(param_callback))
     {
-        if(!PyCallable_Check(param_callback))
-        {
-            PyErr_SetString(PyExc_RuntimeError, "The callback must be callable, if provided.");
-            return NULL;
-        }
-
-        have_callback = 1;
+        PyErr_SetString(PyExc_RuntimeError, "The callback must be callable, if provided.");
+        return NULL;
     }
 
     struct hdhomerun_device_t *hd;
@@ -794,16 +787,6 @@ static PyObject *hdhr_scan_channels(PyObject *self, PyObject *args, PyObject *ke
         j = 0;
         while(j < result.program_count)
         {
-/*
-struct hdhomerun_channelscan_program_t {
-	char program_str[64];
-	uint16_t program_number;
-	uint16_t virtual_major;
-	uint16_t virtual_minor;
-	uint16_t type;
-	char name[32];
-};
-*/
             if((nice_program = Py_BuildValue("s:s:s:b:s:b:s:b:s:b:s:s",
                     "Descriptor",   result.programs[j].program_str,
                     "Number",       result.programs[j].program_number,
@@ -853,46 +836,45 @@ struct hdhomerun_channelscan_program_t {
 
             return NULL;
         }
+
+        // Invoke callback.
         
-        if(have_callback)
+        progress = channelscan_get_progress(scan);
+
+        if((callback_payload_tuple = Py_BuildValue("(O:b)",
+                    nice_channel_info,
+                    progress
+                )) == NULL)
         {
-            progress = channelscan_get_progress(scan);
+            channelscan_destroy(scan);
+            hdhomerun_device_destroy(hd);
 
-            if((callback_payload_tuple = Py_BuildValue("(O:b)",
-                        nice_channel_info,
-                        progress
-                    )) == NULL)
-            {
-                channelscan_destroy(scan);
-                hdhomerun_device_destroy(hd);
+            return NULL;
+        }
+        
+        if((callback_payload_dict = Py_BuildValue("{s:O:s:b}",
+                    "channel_info",  nice_channel_info,
+                    "scan_progress", progress
+                )) == NULL)
+        {
+            channelscan_destroy(scan);
+            hdhomerun_device_destroy(hd);
 
-                return NULL;
-            }
-            
-            if((callback_payload_dict = Py_BuildValue("{s:O:s:b}",
-                        "channel_info",  nice_channel_info,
-                        "scan_progress", progress
-                    )) == NULL)
-            {
-                channelscan_destroy(scan);
-                hdhomerun_device_destroy(hd);
+            return NULL;
+        }
+        
+        if((callback_result = PyObject_Call(param_callback, callback_payload_tuple, NULL)) == NULL)
+        {
+            channelscan_destroy(scan);
+            hdhomerun_device_destroy(hd);
 
-                return NULL;
-            }
-            
-            if((callback_result = PyObject_Call(param_callback, callback_payload_tuple, NULL)) == NULL)
-            {
-                channelscan_destroy(scan);
-                hdhomerun_device_destroy(hd);
+            return NULL;
+        }
 
-                return NULL;
-            }
-
-            if(!PyObject_IsTrue(callback_result))
-            {
-                scan_terminated = 1;
-                break;
-            }
+        if(!PyObject_IsTrue(callback_result))
+        {
+            scan_terminated = 1;
+            break;
         }
         
         i++;
