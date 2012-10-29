@@ -1,4 +1,5 @@
 setup.py
+example/test.py
 pyhdhomerun/__init__.py
 pyhdhomerun/adapter.py
 pyhdhomerun/constants.py
@@ -12,4 +13,5 @@ pyhdhomerun.egg-info/SOURCES.txt
 pyhdhomerun.egg-info/dependency_links.txt
 pyhdhomerun.egg-info/entry_points.txt
 pyhdhomerun.egg-info/not-zip-safe
+pyhdhomerun.egg-info/requires.txt
 pyhdhomerun.egg-info/top_level.txt

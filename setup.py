@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '2.11'
+version = '2.12'
 
 setup(name='pyhdhomerun',
       version=version,
@@ -20,7 +20,7 @@ HDHomeRun interface library. Supports device discovery, channel-scanning, stream
       author_email='myselfasunder@gmail.com',
       url='https://github.com/dsoprea/PyHdHomeRun',
       license='New BSD',
-      packages=['pyhdhomerun'],
+      packages=['pyhdhomerun','example','docs'],
       include_package_data=True,
       zip_safe=False,
       install_requires=[
