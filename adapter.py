@@ -110,6 +110,13 @@ class HdhrDeviceQuery(object):
                               "[%s]." % (device_str))
             raise
 
+    def __del__(self):
+        try:
+            CFUNC_hdhomerun_device_destroy(self.hd)
+        except:
+            logging.exception("Could not destroy device-entity object.")
+            raise
+
     def get_tuner_vstatus(self):
         """Get the current state of the tuner using virtual channels (familiar 
         channel number).

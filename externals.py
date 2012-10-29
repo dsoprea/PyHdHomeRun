@@ -29,6 +29,14 @@ CFUNC_hdhomerun_device_create_from_str.argtypes = \
 CFUNC_hdhomerun_device_create_from_str.restype = \
     POINTER(TYPE_hdhomerun_device_t)
 
+CFUNC_hdhomerun_device_destroy = \
+    hdhr.hdhomerun_device_destroy
+CFUNC_hdhomerun_device_destroy.argtypes = \
+    [POINTER(TYPE_hdhomerun_device_t)
+    ]
+CFUNC_hdhomerun_device_destroy.restype = \
+    None
+
 CFUNC_hdhomerun_device_get_tuner_vstatus = \
     hdhr.hdhomerun_device_get_tuner_vstatus
 CFUNC_hdhomerun_device_get_tuner_vstatus.argtypes = \
