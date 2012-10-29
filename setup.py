@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '2.1'
+version = '2.11'
 
 setup(name='pyhdhomerun',
       version=version,
