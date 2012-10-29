@@ -138,6 +138,25 @@ class HdhrDeviceQuery(object):
             raise Exception(message)
 
         return (vstatus, raw_data.value)
+
+    def set_tuner_vchannel(self, vchannel):
+        """Set the current vchannel (familiar channel numbering)."""
+        
+        logging.info("Doing device_set_tuner_vstatus call for device [%s] with"
+                     " vchannel [%s]." % (self.device_str, vchannel))
+        
+        try:
+            result = CFUNC_hdhomerun_device_set_tuner_vchannel(self.hd, 
+                                                               str(vchannel))
+        except:
+            logging.exception("Could not se vchannel.")
+            raise
+
+        if result != 1:
+            message = "Failed to set vchannel."
+            
+            logging.error(message)
+            raise Exception(message)
         
     def get_supported(self, prefix=None):
         """Get supported features as a dictionary of lists."""

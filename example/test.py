@@ -17,7 +17,13 @@ def find_devices():
 def get_tuner_vstatus(device_adapter):
     
     (vstatus, raw_data) = device_adapter.get_tuner_vstatus()
+    print(vstatus)
 
+def set_tuner_vstatus(device_adapter, vchannel):
+    
+    device_adapter.set_tuner_vchannel(vchannel)
+
+    (vstatus, raw_data) = device_adapter.get_tuner_vstatus()
     print(vstatus)
 
 def get_supported(device_adapter):
@@ -46,7 +52,7 @@ if not devices:
     print("Could not find any devices.")
     exit()
 
-first_device_str = ("%s-%d" % (devices[0].nice_device_id, 0))
+first_device_str = ("%s-%d" % (devices[0].nice_device_id, 1))
 
 #create_device(first_device_str)
 
@@ -54,10 +60,12 @@ device_adapter = HdhrDeviceQuery(first_device_str)
 
 get_tuner_vstatus(device_adapter)
 
+set_tuner_vstatus(device_adapter, 66)
+
 #get_supported(device_adapter)
 
 #print get_count()
 
-scan(device_adapter)
+#scan(device_adapter)
 
 

@@ -116,3 +116,11 @@ CFUNC_hdhomerun_channel_list_total_count.argtypes = \
 CFUNC_hdhomerun_channel_list_total_count.restype = \
     (c_uint32)
 
+CFUNC_hdhomerun_device_set_tuner_vchannel = \
+    hdhr.hdhomerun_device_set_tuner_vchannel
+CFUNC_hdhomerun_device_set_tuner_vchannel.argtypes = \
+    [POINTER(TYPE_hdhomerun_device_t),
+     c_char_p
+    ]
+
+
