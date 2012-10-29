@@ -131,4 +131,11 @@ CFUNC_hdhomerun_device_set_tuner_vchannel.argtypes = \
      c_char_p
     ]
 
+CFUNC_hdhomerun_device_set_tuner_target = \
+    hdhr.hdhomerun_device_set_tuner_target
+CFUNC_hdhomerun_device_set_tuner_target.argtypes = \
+    [POINTER(TYPE_hdhomerun_device_t),
+     c_char_p
+    ]
+
 

@@ -7,12 +7,12 @@ from pyhdhomerun.adapter import HdhrUtility, HdhrDeviceQuery
 from pyhdhomerun.constants import MAP_US_CABLE
 
 def find_devices():
-    (num_found, devices) = HdhrUtility.discover_find_devices_custom()
+    devices = HdhrUtility.discover_find_devices_custom()
+    
+    for device in devices:
+        print("Found: %s" % (device))
 
-    for i in xrange(num_found):
-        print(devices[i])
-
-    return (num_found, devices)
+    return devices
 
 def get_tuner_vstatus(device_adapter):
     
@@ -25,6 +25,12 @@ def set_tuner_vstatus(device_adapter, vchannel):
 
     (vstatus, raw_data) = device_adapter.get_tuner_vstatus()
     print(vstatus)
+
+def set_stream(device_adapter, vchannel, target_uri):
+
+    device_adapter.set_tuner_vchannel(vchannel)
+
+    device_adapter.set_tuner_target(target_uri)
 
 def get_supported(device_adapter):
 
@@ -46,11 +52,18 @@ def get_count():
 
     return HdhrUtility.get_channels_in_range(MAP_US_CABLE)
 
-(num_found, devices) = find_devices()
+devices = find_devices()
 
 if not devices:
     print("Could not find any devices.")
     exit()
+
+i = 0
+for device in devices:
+    print("%d: %s" % (i, device))
+    i += 1
+    
+print
 
 first_device_str = ("%s-%d" % (devices[0].nice_device_id, 1))
 
@@ -60,7 +73,9 @@ device_adapter = HdhrDeviceQuery(first_device_str)
 
 get_tuner_vstatus(device_adapter)
 
-set_tuner_vstatus(device_adapter, 66)
+#set_tuner_vstatus(device_adapter, 49)
+
+set_stream(device_adapter, 49, 'rtp://192.168.5.102:7891')
 
 #get_supported(device_adapter)
 
