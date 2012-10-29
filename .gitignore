@@ -2,4 +2,5 @@
 *.so
 *.log
 *.pyc
-
+/dist/
+/build/
