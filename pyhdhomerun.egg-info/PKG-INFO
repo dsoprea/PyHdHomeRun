@@ -1,6 +1,6 @@
 Metadata-Version: 1.1
 Name: pyhdhomerun
-Version: 2.12
+Version: 2.2.0
 Summary: HDHomeRun interface library.
 Home-page: https://github.com/dsoprea/PyHdHomeRun
 Author: Dustin Oprea

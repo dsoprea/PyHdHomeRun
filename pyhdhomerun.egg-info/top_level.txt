@@ -1,3 +1,2 @@
 pyhdhomerun
-docs
 example
