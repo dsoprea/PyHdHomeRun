@@ -1,6 +1,6 @@
 Metadata-Version: 1.1
 Name: pyhdhomerun
-Version: 2.2.0
+Version: 2.2.2
 Summary: HDHomeRun interface library.
 Home-page: https://github.com/dsoprea/PyHdHomeRun
 Author: Dustin Oprea
@@ -9,7 +9,7 @@ License: New BSD
 Description: HDHomeRun interface library. Supports device discovery, channel-scanning, streaming, status inquiries, channel changes, etc..
 Keywords: tv television tuner tvtuner hdhomerun
 Platform: UNKNOWN
-Classifier: Development Status :: 5 - Production/Stable
+Classifier: Development Status :: 4 - Beta
 Classifier: License :: OSI Approved :: BSD License
 Classifier: Natural Language :: English
 Classifier: Programming Language :: Python :: 2.7

@@ -1,6 +1,4 @@
 setup.py
-example/__init__.py
-example/test.py
 pyhdhomerun/__init__.py
 pyhdhomerun/adapter.py
 pyhdhomerun/constants.py
