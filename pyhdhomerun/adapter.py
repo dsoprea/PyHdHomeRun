@@ -25,13 +25,13 @@ class HdhrUtility(object):
             raise
 
         logging.info("Discovering devices.  MAX= (%d)  IP= [%s]" % 
-                     (MAX_DEVICES, ip))
+                     (MAX_DEVICES, ip if ip_int else 0))
 
         devices = (TYPE_hdhomerun_discover_device_t * MAX_DEVICES)()
 
         try:
             num_found = CFUNC_hdhomerun_discover_find_devices_custom(
-                            0, 
+                            ip_int, 
                             HDHOMERUN_DEVICE_TYPE_TUNER, 
                             HDHOMERUN_DEVICE_ID_WILDCARD, 
                             devices, 

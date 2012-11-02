@@ -2,12 +2,15 @@
 
 from sys import exit
 from pprint import pprint
+from os import chdir
+
+chdir('..')
 
 from pyhdhomerun.adapter import HdhrUtility, HdhrDeviceQuery
 from pyhdhomerun.constants import MAP_US_CABLE
 
 def find_devices():
-    devices = HdhrUtility.discover_find_devices_custom()
+    devices = HdhrUtility.discover_find_devices_custom('192.168.5.11')
     
     for device in devices:
         print("Found: %s" % (device))
@@ -64,6 +67,8 @@ for device in devices:
     i += 1
     
 print
+
+exit()
 
 first_device_str = ("%s-%d" % (devices[0].nice_device_id, 1))
 
