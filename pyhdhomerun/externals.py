@@ -1,3 +1,5 @@
+import logging
+
 from ctypes import *
 
 from pyhdhomerun.hdhr import get_hdhr
