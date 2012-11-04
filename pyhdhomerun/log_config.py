@@ -2,6 +2,7 @@ import logging
 
 from os import environ
 from getpass import getuser
+from os.path import dirname, exists
 
 import pyhdhomerun
 app_path = dirname(pyhdhomerun.__file__)
