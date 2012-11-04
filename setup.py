@@ -1,7 +1,17 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '2.2.3'
+from pyhdhomerun.hdhr import get_hdhr
+
+try:
+    get_hdhr()
+except OSError as e:
+    print("Could not load HDHomeRun library: %s" % (e))
+    sys.exit(1)
+else:
+    print("HDHomeRun libraries verified.")
+    
+version = '2.2.4'
 
 setup(name='pyhdhomerun',
       version=version,
