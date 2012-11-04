@@ -1,3 +1,4 @@
+setup.cfg
 setup.py
 pyhdhomerun/__init__.py
 pyhdhomerun/adapter.py
