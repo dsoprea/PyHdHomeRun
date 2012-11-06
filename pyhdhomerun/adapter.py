@@ -42,10 +42,11 @@ class HdhrUtility(object):
             raise
 
         if num_found == -1:
-            message = ("Device discovery failed (%d)." % (num_found))
+            message = ("Device discovery failed (%d), but this could be due to" 
+                       " lack of connectivity." % (num_found))
 
-            logging.error(message)
-            raise Exception(message)
+            logging.warn(message)
+            return []
 
         logging.info("(%d) devices found." % (num_found))
 
