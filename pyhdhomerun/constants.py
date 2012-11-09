@@ -23,3 +23,8 @@ MAP_US_CABLE = 'us-cable'
 MAP_US_HRC	 = 'us-hrc'
 MAP_US_IRC   = 'us-irc'
 
+MAP_LIST = [ MAP_AU_BCAST, MAP_AU_BCAST, MAP_EU_BCAST, MAP_EU_CABLE,
+             MAP_TW_BCAST, MAP_TW_CABLE, MAP_KR_BCAST, MAP_KR_CABLE,
+             MAP_US_BCAST, MAP_US_CABLE, MAP_US_HRC, MAP_US_IRC,
+           ]
+

@@ -8,11 +8,15 @@ from socket import inet_aton
 from pyhdhomerun.externals import *
 from pyhdhomerun.types import *
 from pyhdhomerun.constants import MAX_DEVICES, HDHOMERUN_DEVICE_TYPE_TUNER, \
-                                  HDHOMERUN_DEVICE_ID_WILDCARD
+                                  HDHOMERUN_DEVICE_ID_WILDCARD, MAP_LIST
 from pyhdhomerun.utility import ip_ascii_to_int
 
 class HdhrUtility(object):
     """Calls that don't require a device entity."""
+
+    @staticmethod
+    def get_channel_maps():
+        return MAP_LIST
 
     @staticmethod
     def discover_find_devices_custom(ip=None):
@@ -213,9 +217,82 @@ class HdhrDeviceQuery(object):
 
         return rows
 
-    def scan_channels(self, channel_map, found_cb=None, incremental_cb=None):
-        """Determine which channels can be locked. This is a long process and 
-        the callbacks should be used in order to present progress to the user.
+    def iterate_channels_start(self, channel_map):
+        """Establish the initial state information for a channel-scan. As 
+        opposed to the generator function, this allows the caller to stash the
+        state value and each, next, successive channel at some unspecified time
+        in the future.
+        """
+    
+        logging.info("Doing channel scan with map [%s]." % (channel_map))
+
+        logging.debug("Determining range of channel scan.")
+
+        try:
+            num_channels = HdhrUtility.get_channels_in_range(channel_map)
+        except:
+            logging.exception("Could not calculate the maximum number of "
+                              "channels to be scanned.")
+            raise
+
+        logging.debug("Building channel-scan object.")
+
+        try:
+            scan = CFUNC_channelscan_create(self.hd, channel_map)
+        except:
+            logging.exception("Could not initialize channel-scan object.")
+            raise
+
+        if not scan:
+            message = "Could not build channel-scan object."
+            
+            logging.error(message)
+            raise Exception(message)
+
+        return { 'scan':    scan, 
+                 'current': 0, 
+                 'count':   num_channels,
+                 'done':    False,
+               }
+    
+    def iterate_channels_next(self, state):
+        """Take the object returned by iterate_channels_start and scan the next
+        channel.
+        """
+
+        # Scanning has already completed.
+        if state['done']:
+            logging.debug("HDHR: Iteration is short-circuiting because we're "
+                          "already done.")
+            return False
+
+        result = TYPE_hdhomerun_channelscan_result_t()
+
+        # Done scanning?
+        if CFUNC_channelscan_advance(state['scan'].contents, result) != 1:
+            state['done'] = True
+            
+            logging.debug("HDHR: Finished channel-scanning.")
+            return False
+
+        state['current'] += 1
+            
+        if CFUNC_channelscan_detect(state['scan'].contents, result) == 1 and \
+             result.program_count > 0:
+
+            logging.debug("HDHR: Channel (%d) locked." % (state['current']))
+            return result
+        
+        else:
+            logging.debug("HDHR: Channel (%d) skipped." % (state['current']))
+            return None
+
+        logging.debug("Channel scan progress is (%d)/(%d)." % (i + 1, num_channels))
+
+    def scan_channels(self, channel_map):
+        """This is a generator that iterates through all potential channels and
+        determines what can be locked. It yields at every candidate frequency,
+        and indicates whether it could be locked, current progress, . If so, it 
         """
 
         logging.info("Doing channel scan with map [%s]." % (channel_map))
@@ -246,8 +323,7 @@ class HdhrDeviceQuery(object):
         logging.debug("Doing actual scan.")
 
         try:
-            found = self.__do_scan(scan, num_channels, found_cb, 
-                                   incremental_cb)
+            found = self.__do_scan(scan, num_channels)
         except:
             logging.exception("Could not do actual channel scan.")
             raise
@@ -261,49 +337,31 @@ class HdhrDeviceQuery(object):
                 logging.exception("Could not destroy channel-scan entity.")
                 raise
 
-    def __do_scan(self, scan, num_channels, found_cb=None, 
-                  incremental_cb=None):
+    def __do_scan(self, scan, num_channels):
         """Do the actual scan (looping over channel numbers)."""
     
         i = 0
         num_channels = float(num_channels)
-        found = []
         while 1:
             result = TYPE_hdhomerun_channelscan_result_t()
 
             if CFUNC_channelscan_advance(scan.contents, result) != 1:
                 break
 
-            elif CFUNC_channelscan_detect(scan.contents, result) == 1:
-                if result.program_count > 0:
-                    found.append(result)
-                
-                    if found_cb:
-                        logging.info("Invoking 'found' callback.")
-
-                        try:
-                            found_cb(result, scan.contents)
-                        except:
-                            logging.exception("The 'found' callback threw an "
-                                              "exception.")
-                            raise
+            if CFUNC_channelscan_detect(scan.contents, result) == 1 and \
+                 result.program_count > 0:
+            
+                yield (True, i, num_channels, result)
+            
+            else:
+                yield (False, i, num_channels)
+            
             i += 1
 
-            progress = (float(i) / num_channels * 100.0)
+            logging.debug("Channel scan progress is (%d)/(%d)." % (i + 1, num_channels))
 
-            if incremental_cb:
-                logging.info("Invoking 'incremental' callback.")
-            
-                try:
-                    incremental_cb(scan.contents, progress)
-                except:
-                    logging.exception("The 'incremental' callback threw an "
-                                      "exception.")
-                    raise
-
-            logging.info("Channel scan progress is (%.2f)%%." % (progress))
-
-        return found
+        # Yield at 100%.
+        yield (False, i, num_channels)
 
     def set_tuner_target(self, target_uri):
         """Start sending video to the given URI."""
