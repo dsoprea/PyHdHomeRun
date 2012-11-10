@@ -287,7 +287,8 @@ class HdhrDeviceQuery(object):
             logging.debug("HDHR: Channel (%d) skipped." % (state['current']))
             return None
 
-        logging.debug("Channel scan progress is (%d)/(%d)." % (i + 1, num_channels))
+        logging.debug("Channel scan progress is (%d)/(%d)." % (i + 1, 
+                                                               num_channels))
 
     def scan_channels(self, channel_map):
         """This is a generator that iterates through all potential channels and
@@ -358,7 +359,8 @@ class HdhrDeviceQuery(object):
             
             i += 1
 
-            logging.debug("Channel scan progress is (%d)/(%d)." % (i + 1, num_channels))
+            logging.debug("Channel scan progress is (%d)/(%d)." % 
+                          (i + 1, num_channels))
 
         # Yield at 100%.
         yield (False, i, num_channels)
