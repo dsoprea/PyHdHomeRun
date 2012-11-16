@@ -4,11 +4,14 @@ import logging
 from ctypes import *
 from sys import exit
 from socket import inet_aton
+from time import time
+from collections import deque
+from struct import unpack
 
 from pyhdhomerun.externals import *
 from pyhdhomerun.types import *
-from pyhdhomerun.constants import MAX_DEVICES, HDHOMERUN_DEVICE_TYPE_TUNER, \
-                                  HDHOMERUN_DEVICE_ID_WILDCARD, MAP_LIST
+from pyhdhomerun.constants import *
+                                  
 from pyhdhomerun.utility import ip_ascii_to_int
 
 class HdhrUtility(object):
@@ -114,21 +117,10 @@ class HdhrUtility(object):
 class HdhrDeviceQuery(object):
     """Device-specific queries."""
 
-    device_str = None
     hd = None
 
-    def __init__(self, device_str):
-        self.device_str = device_str
-
-        logging.info("Building device-query object for device [%s]." % 
-                     (self.device_str))
-    
-        try:
-            self.hd = HdhrUtility.device_create_from_str(self.device_str)
-        except:
-            logging.exception("Could not create device entity from string "
-                              "[%s]." % (device_str))
-            raise
+    def __init__(self, hd):
+        self.hd = hd
 
     def __del__(self):
         try:
@@ -143,7 +135,7 @@ class HdhrDeviceQuery(object):
         """
 
         logging.info("Doing device_get_tuner_vstatus call for device [%s]." % 
-                     (self.device_str))
+                     (self.hd))
 
         raw_data = c_char_p()
         vstatus = TYPE_hdhomerun_tuner_vstatus_t()
@@ -170,7 +162,7 @@ class HdhrDeviceQuery(object):
         """Set the current vchannel (familiar channel numbering)."""
         
         logging.info("Doing device_set_tuner_vstatus call for device [%s] with"
-                     " vchannel [%s]." % (self.device_str, vchannel))
+                     " vchannel [%s]." % (self.hd, vchannel))
         
         try:
             result = CFUNC_hdhomerun_device_set_tuner_vchannel(self.hd, 
@@ -191,7 +183,7 @@ class HdhrDeviceQuery(object):
         raw_str = c_char_p()
 
         logging.info("Doing device_get_supported call for device [%s]." % 
-                     (self.device_str))
+                     (self.hd))
 
         try:
             result = CFUNC_hdhomerun_device_get_supported(
@@ -367,7 +359,6 @@ class HdhrDeviceQuery(object):
 
     def set_tuner_target(self, target_uri):
         """Start sending video to the given URI."""
-# If doesn't work: int hdhomerun_device_stream_start(struct hdhomerun_device_t *hd)
 
         logging.info("Setting target to [%s]." % (target_uri))
 
@@ -384,4 +375,227 @@ class HdhrDeviceQuery(object):
             
             logging.error(message)
             raise Exception(message)
+
+class HdhrVideoPrimitives(object):
+    """Wrappers for low-level functions."""
+
+    hd = None
+
+    def __init__(self, hd):
+        self.hd = hd
+
+    def start_video(self):
+        """Start receiving video (the library opens a receiver thread)."""
+    
+        try:
+            result = CFUNC_hdhomerun_device_stream_start(self.hd)
+        except:
+            logging.exception("There was an exception within the stream-start "
+                              "external.")
+            raise
+
+        if result != 1:
+            message = "Stream-start failed."
+            
+            logging.error(message)
+            raise Exception(message)
+    
+    def stop_video(self):
+        """Cease receiving video (the library closes its receiver thread)."""
+    
+        try:
+            result = CFUNC_hdhomerun_device_stream_stop(self.hd)
+        except:
+            logging.exception("There was an exception within the stream-stop "
+                              "external.")
+            raise
+    
+    def receive_rtp_frame(self):
+        """Receive a single communication frame. May be video, audio, etc..
+        (however RTP splits its data up).
+        """
+
+        actual_count = c_uint()
+        
+        try:
+            byte_array = CFUNC_hdhomerun_device_stream_recv(
+                            self.hd, 
+                            VIDEO_DATA_BUFFER_SIZE_1S, 
+                            byref(actual_count)
+                         )
+        except:
+            logging.exception("Could not read RTP frame.")
+            raise
+
+        return (byte_array, actual_count.value)
+    
+class HdhrVideo(object):    
+    """Provides useful functionality implementing the methods in the primitives
+    class, above.
+    """
+
+    hd    = None
+    vprim = None
+
+    def __init__(self, hd):
+        self.hd = hd
+
+        try:
+            self.vprim = HdhrVideoPrimitives(hd)
+        except:
+            logging.exception("Could not build video-primitives object.")
+            raise
+
+    def __receive_loop(self, frame_cb):
+        count = 0
+        while 1:
+            try:        
+                frame = self.vprim.receive_rtp_frame()
+            except:
+                logging.exception("Could not read frame.")
+                raise
+
+            if not frame[1]:
+                continue
+
+            try:
+                if not frame_cb(frame):
+                    break
+            except:
+                logging.exception("Uncaught exception in frame callback.")
+                raise
+
+            count += 1
+
+        return count
+
+    def stream_video(self, frame_cb):
+
+        logging.info("Starting video feed: %s" % (self.hd))
+        
+        try:
+            self.vprim.start_video()
+        except:
+            logging.exception("Could not start feed.")
+            raise
+
+        try:
+            self.__receive_loop(frame_cb)
+        except Exception as e:
+            logging.exception("There was an error in the feed receive-loop: "
+                              "%s" % (e))
+            raise
+        finally:
+            logging.info("Stopping video feed: %s" % (self.hd))
+        
+            try:
+                self.vprim.stop_video()
+            except:
+                logging.exception("Exception while stopping feed.")
+                raise
+
+    def stream_to_file(self, file_path):
+    
+        with file(file_path, 'ab') as f:
+
+            def decode_mpegts_adaptation_data(buffer):
+
+                (length, byte1) = unpack('BB', buffer[4:6])
+                
+                discontinuity     = bool(byte1 & 0b10000000)
+                random_access     = bool(byte1 & 0b01000000)
+                priority          = bool(byte1 & 0b00100000)
+                pcr               = bool(byte1 & 0b00010000)
+                opcr              = bool(byte1 & 0b00001000)
+                splicing_point    = bool(byte1 & 0b00000100)
+                transport_private = bool(byte1 & 0b00000010)
+                extension         = bool(byte1 & 0b00000001)
+
+                return { 'DiscontinuityIndicator':            discontinuity,
+                         'RandomAccessIndicator':             random_access,
+                         'ElementaryStreamPriorityIndicator': priority,
+                         'PcrFlag':                           pcr,
+                         'OpcrFlag':                          opcr,
+                         'SplicingPointFlag':                 splicing_point,
+                         'TransportPrivateDataFlag':          transport_private,
+                         'Extension':                         extension,
+                       }
+
+            def process_mpegts_packet(buffer):
+
+                (sync_byte, byte1and2, byte3) = unpack('!BHB', buffer[0:4])
+
+                tei                = bool(byte1and2 & 0b10000000)
+                pusi               = bool(byte1and2 & 0b01000000)
+                trans_priority     = bool(byte1and2 & 0b00100000)
+                pid                = byte1and2 & 0b1111111111111
+                scrambling_control = (byte3 & 0b11000000) >> 6
+                adaptation_exists  = (byte3 & 0b110000) >> 4
+                continuity_counter = (byte3 & 0b1111)
+
+                adaptation_data = decode_mpegts_adaptation_data(buffer) \
+                                                if adaptation_exists \
+                                                else None
+
+                return {
+                        'SyncByte':          sync_byte,
+                        'Tei':               tei,
+                        'Pusi':              pusi,
+                        'TransPriority':     trans_priority,
+                        'PacketId':          pid,
+                        'ScramblingControl': scrambling_control,
+                        'AdaptationExists':  adaptation_exists,
+                        'ContinuityCounter': continuity_counter,
+                        'Adaptation':        adaptation_data,
+#                        'Payload':           payload,
+                       }
+
+            def frame_received(frame):
+                if not hasattr(frame_received, 'frame_count'):
+                    frame_received.last_second = time()
+                    frame_received.frame_count = 0
+                    frame_received.bytes_per_second = 0
+                    frame_received.rates = deque()
+                    frame_received.max_history = 3
+                    frame_received.types = {}
+            
+                current_second = int(time())
+            
+                if frame_received.frame_count > 0 and current_second != frame_received.last_second:
+                    frame_received.rates.append(frame_received.frame_count)
+                    if len(frame_received.rates) > frame_received.max_history:
+                        frame_received.rates.popleft()
+
+                    types = []
+                    for ptype, count in frame_received.types.iteritems():
+                        types.append('%d=%d' % (ptype, count))
+                    
+                    print("Frames/s: %d  Bytes/s: %d [%s]" % 
+                          (frame_received.frame_count, 
+                           frame_received.bytes_per_second, ' '.join(types)))
+                    
+                    frame_received.frame_count = 0
+                    frame_received.bytes_per_second = 0
+                    frame_received.last_second = current_second
+
+                (cbuffer, length) = frame
+
+                frame_received.frame_count += 1
+                frame_received.bytes_per_second += length
+
+                buffer = ''.join([chr(cbuffer[i]) for i in xrange(length)])
+                f.write(buffer)
+            
+                from pprint import pprint
+                pprint(process_mpegts_packet(buffer))
+            
+                return True
+
+            print("Beginning to stream.")
+
+            try:
+                return self.stream_video(frame_received)
+            except:
+                logging.exception("Error while streaming the video.")
+                raise
 

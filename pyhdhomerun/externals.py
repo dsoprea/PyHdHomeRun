@@ -140,4 +140,26 @@ CFUNC_hdhomerun_device_set_tuner_target.argtypes = \
      c_char_p
     ]
 
+CFUNC_hdhomerun_device_stream_start = \
+    hdhr.hdhomerun_device_stream_start
+CFUNC_hdhomerun_device_stream_start.argtypes = \
+    [POINTER(TYPE_hdhomerun_device_t),
+    ]
+
+CFUNC_hdhomerun_device_stream_stop = \
+    hdhr.hdhomerun_device_stream_stop
+CFUNC_hdhomerun_device_stream_stop.argtypes = \
+    [POINTER(TYPE_hdhomerun_device_t),
+    ]
+CFUNC_hdhomerun_device_stream_stop.restype = None
+
+CFUNC_hdhomerun_device_stream_recv = \
+    hdhr.hdhomerun_device_stream_recv
+CFUNC_hdhomerun_device_stream_recv.argtypes = \
+    [POINTER(TYPE_hdhomerun_device_t),
+     c_uint32,
+     POINTER(c_uint32)
+    ]
+CFUNC_hdhomerun_device_stream_recv.restype = \
+    POINTER(c_uint8)
 
