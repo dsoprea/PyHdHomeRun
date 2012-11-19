@@ -498,58 +498,6 @@ class HdhrVideo(object):
     
         with file(file_path, 'ab') as f:
 
-            def decode_mpegts_adaptation_data(buffer):
-
-                (length, byte1) = unpack('BB', buffer[4:6])
-                
-                discontinuity     = bool(byte1 & 0b10000000)
-                random_access     = bool(byte1 & 0b01000000)
-                priority          = bool(byte1 & 0b00100000)
-                pcr               = bool(byte1 & 0b00010000)
-                opcr              = bool(byte1 & 0b00001000)
-                splicing_point    = bool(byte1 & 0b00000100)
-                transport_private = bool(byte1 & 0b00000010)
-                extension         = bool(byte1 & 0b00000001)
-
-                return { 'DiscontinuityIndicator':            discontinuity,
-                         'RandomAccessIndicator':             random_access,
-                         'ElementaryStreamPriorityIndicator': priority,
-                         'PcrFlag':                           pcr,
-                         'OpcrFlag':                          opcr,
-                         'SplicingPointFlag':                 splicing_point,
-                         'TransportPrivateDataFlag':          transport_private,
-                         'Extension':                         extension,
-                       }
-
-            def process_mpegts_packet(buffer):
-
-                (sync_byte, byte1and2, byte3) = unpack('!BHB', buffer[0:4])
-
-                tei                = bool(byte1and2 & 0b10000000)
-                pusi               = bool(byte1and2 & 0b01000000)
-                trans_priority     = bool(byte1and2 & 0b00100000)
-                pid                = byte1and2 & 0b1111111111111
-                scrambling_control = (byte3 & 0b11000000) >> 6
-                adaptation_exists  = (byte3 & 0b110000) >> 4
-                continuity_counter = (byte3 & 0b1111)
-
-                adaptation_data = decode_mpegts_adaptation_data(buffer) \
-                                                if adaptation_exists \
-                                                else None
-
-                return {
-                        'SyncByte':          sync_byte,
-                        'Tei':               tei,
-                        'Pusi':              pusi,
-                        'TransPriority':     trans_priority,
-                        'PacketId':          pid,
-                        'ScramblingControl': scrambling_control,
-                        'AdaptationExists':  adaptation_exists,
-                        'ContinuityCounter': continuity_counter,
-                        'Adaptation':        adaptation_data,
-#                        'Payload':           payload,
-                       }
-
             def frame_received(frame):
                 if not hasattr(frame_received, 'frame_count'):
                     frame_received.last_second = time()
@@ -585,13 +533,12 @@ class HdhrVideo(object):
 
                 buffer = ''.join([chr(cbuffer[i]) for i in xrange(length)])
                 f.write(buffer)
-            
-                from pprint import pprint
-                pprint(process_mpegts_packet(buffer))
+
+#                process_mpegts_packet(buffer)
             
                 return True
 
-            print("Beginning to stream.")
+#            print("Beginning to stream.")
 
             try:
                 return self.stream_video(frame_received)
