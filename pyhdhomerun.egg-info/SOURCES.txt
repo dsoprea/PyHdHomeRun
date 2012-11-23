@@ -5,6 +5,7 @@ pyhdhomerun/constants.py
 pyhdhomerun/externals.py
 pyhdhomerun/hdhr.py
 pyhdhomerun/log_config.py
+pyhdhomerun/mpegts.py
 pyhdhomerun/types.py
 pyhdhomerun/utility.py
 pyhdhomerun.egg-info/PKG-INFO
