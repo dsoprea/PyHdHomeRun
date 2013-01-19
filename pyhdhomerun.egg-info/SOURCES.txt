@@ -12,6 +12,6 @@ pyhdhomerun.egg-info/PKG-INFO
 pyhdhomerun.egg-info/SOURCES.txt
 pyhdhomerun.egg-info/dependency_links.txt
 pyhdhomerun.egg-info/entry_points.txt
-pyhdhomerun.egg-info/not-zip-safe
 pyhdhomerun.egg-info/requires.txt
 pyhdhomerun.egg-info/top_level.txt
+pyhdhomerun.egg-info/zip-safe

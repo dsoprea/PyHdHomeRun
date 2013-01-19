@@ -11,7 +11,7 @@ except OSError as e:
 else:
     print("HDHomeRun libraries verified.")
     
-version = '2.3.2'
+version = '2.3.3'
 
 setup(name='pyhdhomerun',
       version=version,
@@ -32,10 +32,9 @@ HDHomeRun interface library. Supports device discovery, channel-scanning, stream
       license='New BSD',
       packages=['pyhdhomerun'],
       include_package_data=True,
-      zip_safe=False,
+      zip_safe=True,
       install_requires=[
           'setuptools',
-          'cython',
       ],
       entry_points="""
       # -*- Entry points: -*-
