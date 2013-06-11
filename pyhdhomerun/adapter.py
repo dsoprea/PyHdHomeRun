@@ -161,14 +161,16 @@ class HdhrDeviceQuery(object):
     def set_tuner_vchannel(self, vchannel):
         """Set the current vchannel (familiar channel numbering)."""
         
-        logging.info("Doing device_set_tuner_vstatus call for device [%s] with"
+        vchannel = str(vchannel)
+        
+        logging.info("Doing device_set_tuner_vchannel call for device [%s] with"
                      " vchannel [%s]." % (self.hd, vchannel))
         
         try:
             result = CFUNC_hdhomerun_device_set_tuner_vchannel(self.hd, 
-                                                               str(vchannel))
+                                                               vchannel)
         except:
-            logging.exception("Could not se vchannel.")
+            logging.exception("Could not set vchannel.")
             raise
 
         if result != 1:
@@ -357,8 +359,11 @@ class HdhrDeviceQuery(object):
         # Yield at 100%.
         yield (False, i, num_channels)
 
-    def set_tuner_target(self, target_uri):
+    def set_tuner_target(self, target_uri=None):
         """Start sending video to the given URI."""
+
+        if target_uri is None:
+            target_uri = 'none'
 
         logging.info("Setting target to [%s]." % (target_uri))
 

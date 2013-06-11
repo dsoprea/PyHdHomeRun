@@ -22,7 +22,7 @@ def get_tuner_vstatus(device_adapter):
     (vstatus, raw_data) = device_adapter.get_tuner_vstatus()
     print(vstatus)
 
-def set_tuner_vstatus(device_adapter, vchannel):
+def set_tuner_vchannel(device_adapter, vchannel):
     
     device_adapter.set_tuner_vchannel(vchannel)
 
@@ -32,7 +32,6 @@ def set_tuner_vstatus(device_adapter, vchannel):
 def set_stream(device_adapter, vchannel, target_uri):
 
     device_adapter.set_tuner_vchannel(vchannel)
-
     device_adapter.set_tuner_target(target_uri)
 
 def get_supported(device_adapter):
@@ -70,20 +69,23 @@ print
 
 first_device_str = ("%s-%d" % (devices[0].nice_device_id, 1))
 
-#create_device(first_device_str)
+hd = HdhrUtility.device_create_from_str(first_device_str)
 
-device_adapter = HdhrDeviceQuery(first_device_str)
+device_adapter = HdhrDeviceQuery(hd)
 
-get_tuner_vstatus(device_adapter)
+status = get_tuner_vstatus(device_adapter)
+print("Status: %s" % (status))
 
-#set_tuner_vstatus(device_adapter, 49)
-
-set_stream(device_adapter, 49, 'rtp://192.168.5.102:7891')
+device_adapter.set_tuner_vchannel(49)
+device_adapter.set_tuner_target('rtp://192.168.5.13:7891')
+#device_adapter.set_tuner_target(None)
 
 #get_supported(device_adapter)
 
 #print get_count()
 
 #scan(device_adapter)
+
+print("Done.")
 
 

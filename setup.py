@@ -11,7 +11,7 @@ except OSError as e:
 else:
     print("HDHomeRun libraries verified.")
     
-version = '2.3.3'
+version = '2.3.4'
 
 setup(name='pyhdhomerun',
       version=version,
