@@ -1,9 +1,3 @@
-import os
-
-HDHR_FILEPATH = os.environ['HDHOMERUN_PATH'] \
-                    if 'HDHOMERUN_PATH' in os.environ \
-                    else '/usr/lib/libhdhomerun.so'
-                    
 MAX_DEVICES = 16
 
 HDHOMERUN_DEVICE_TYPE_TUNER             = 0x00000001

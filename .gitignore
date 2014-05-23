@@ -4,3 +4,9 @@
 *.pyc
 /dist/
 /build/
+/pyhdhomerun.egg-info
+/bin
+/include
+/lib
+/local
+

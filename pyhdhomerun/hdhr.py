@@ -1,23 +1,9 @@
-import logging
+from ctypes import cdll
+from ctypes.util import find_library
 
-from ctypes import *
+_FILEPATH = find_library('hdhomerun')
+if _FILEPATH is None:
+    _FILEPATH = 'libhdhomerun.so'
 
-from pyhdhomerun import constants
-
-def get_hdhr():
-    """Get an instance of the library."""
-
-    try:
-        return get_hdhr.instance
-    except:
-        pass
-
-    try:
-        get_hdhr.instance = cdll.LoadLibrary(constants.HDHR_FILEPATH)
-    except:
-        logging.exception("Could not load HDHR library from [%s]." % 
-                          (constants.HDHR_FILEPATH))
-        raise
-
-    return get_hdhr.instance
+library = cdll.LoadLibrary(_FILEPATH)
 

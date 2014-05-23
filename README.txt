@@ -1,7 +1,8 @@
 ** Project completed. Pending final review. **
 
+
 PyHdHomeRun
-===========
+-----------
 
 The HDHomeRun (HDHR) TV tuner is a neat, standalone tuner-device that 
 communicates the video signals to your system over the network. A cheap one 
@@ -33,8 +34,9 @@ The goals of this project were as follows:
 
 All goals have all been completed.
 
+
 Requirements
-============
+------------
 
 > The HDHomeRun library. As my own distribution (Ubuntu) had a version that was 
   too old, you might have to download these from the website: 
@@ -46,8 +48,9 @@ Requirements
   "libhdhomerun.so" is either in the directory of this project, or in the 
   library search-path.
 
+
 Executing the Current Development Example Script
-================================================
+------------------------------------------------
 
 From the directory that you extract to:
 
