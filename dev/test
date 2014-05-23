@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python2.7
 
 from sys import exit
 from pprint import pprint
@@ -87,5 +87,4 @@ device_adapter.set_tuner_target('rtp://192.168.5.13:7891')
 #scan(device_adapter)
 
 print("Done.")
-
-
+s
