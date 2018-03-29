@@ -12,17 +12,16 @@ except OSError as e:
     sys.exit(1)
 else:
     print("HDHomeRun libraries verified.")
-    
+
 long_description = "HDHomeRun interface library. Supports device discovery, " \
                    "channel-scanning, streaming, status inquiries, channel " \
                    "changes, etc.."""
-    
+
 setup(name='pyhdhomerun',
       version='2.3.5',
       description="HDHomeRun interface library.",
       long_description=long_description,
       classifiers=['Development Status :: 4 - Beta',
-                   'License :: OSI Approved :: BSD License',
                    'Natural Language :: English',
                    'Topic :: Software Development :: Libraries :: Python Modules',
                    'Topic :: Multimedia :: Video :: Capture'],
